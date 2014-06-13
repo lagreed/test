@@ -1,0 +1,72 @@
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdint.h>
+
+#define PAGE_SIZE 4096 
+/*The second argument is the size of the region we want mapped.
+The size will always be a multiple of the page size (on Linux, this is 4 kB or 4096 bytes),
+so we specify the size of a single page even though we only need a byte.*/
+
+#define LWHPS2FPGA_BRIDGE_BASE 0xff200000 /*c'est d'adresse de ma SORTIE LED sur 1bit sur le FPGA*/
+
+volatile unsigned char *blink_mem; /*création d'un pointeur*/
+void *bridge_map; /*création d'un pointeur générique*/
+
+int main(int argc, char *argv[])
+{
+
+
+
+
+ /* Entier qui servira à récupérer le descripteur de fichier */
+
+	int fd;
+
+/*
+Nous allons ici expliquer comment accéder au contenu des fichiers : 
+comment ouvrir et fermer un fichier, lire et écrire dans un fichier, etc.
+Pour pouvoir manipuler le contenu d'un fichier, il faut utiliser un descripteur de fichier ouvert.
+Ce descripteur est un simple entier qui sera obtenu en utilisant la fonction d'ouverture de fichier
+et qui sera ensuite utilisé par toutes les autres fonctions manipulant les fichiers
+*/
+
+	fd = open("/dev/mem", O_RDWR|O_SYNC);
+/* là on autorise en écriture/lecture avec une synchro un fichier dans la mémoire (plein d'adresse dispo)
+ ET on récup le descripteur*/
+
+
+
+	/* map the LWHPS2FPGA bridge into process memory */
+	bridge_map = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED,
+				fd, LWHPS2FPGA_BRIDGE_BASE);
+/*on associe le pointeur à une adresse bien précise dans le fichier ouvert*/
+
+	/* get the peripheral's base address */
+	blink_mem = (unsigned char *)(bridge_map); /*donne la valeur du contenue de bridge map? */
+/*je pige pas cette ligne...*/
+
+
+
+	/* write the value */
+while(1)
+{	
+	*blink_mem = 0x0; /* c'est la valeur à l'adresse pointé par blink_mem qui change*/
+
+
+usleep(100000);
+	
+	*blink_mem = 0x1;
+
+usleep(100000);
+}
+
+ /* Nous fermons le fichier, avec le while(1) c'est inutile */
+	close(fd);
+
+return(0);
+}
